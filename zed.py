@@ -2,6 +2,7 @@ import numpy as np
 import cv2 as cv
 import pyzed.sl as sl
 import sys
+import pickle
 
 class ZED():
     '''StereoLabs ZED image grabber'''
@@ -15,6 +16,13 @@ class ZED():
         self.right_image = sl.Mat()
         self.depth_image = sl.Mat()
         self.depth_float = sl.Mat()
+        self.pose = sl.Pose()
+        self.transform = sl.Transform()
+        self.sensors_data = sl.SensorsData()
+        self.py_translation = sl.Translation()
+        self.py_orientation = sl.Orientation()
+        self.zed_imu_pose = sl.Transform()
+        self.input_type = sl.InputType()
         self.MAP_RESOLUTION = {'2k': sl.RESOLUTION.HD2K, '1080p': sl.RESOLUTION.HD1080, '720p': sl.RESOLUTION.HD720, 'vga': sl.RESOLUTION.VGA}
         self.MAP_DEPTH_MODE = {'neural': sl.DEPTH_MODE.NEURAL, 'ultra': sl.DEPTH_MODE.ULTRA, 'quality': sl.DEPTH_MODE.QUALITY, 'performance': sl.DEPTH_MODE.PERFORMANCE}
         self.MAP_COORD_UNIT = {'mm': sl.UNIT.MILLIMETER, 'cm': sl.UNIT.CENTIMETER, 'm': sl.UNIT.METER}
@@ -27,6 +35,9 @@ class ZED():
             config.camera_fps = fps
         if depth_mode is not None:
             config.depth_mode = self.MAP_DEPTH_MODE[depth_mode.lower()]
+        if coord_unit is not None:
+            config.coordinate_units = self.MAP_COORD_UNIT[coord_unit.lower()]
+        config.coordinate_system = sl.COORDINATE_SYSTEM.RIGHT_HANDED_Y_UP
         status = self.camera.open(config)
         self.is_opened = (status == sl.ERROR_CODE.SUCCESS)
         return self.is_opened
@@ -37,14 +48,59 @@ class ZED():
             self.is_opened = False
             return self.camera.close()
         return False
+    
+    def get_depth(self):
+        '''Retrieve the depth data'''
+        self.camera.retrieve_measure(self.depth_float, sl.MEASURE.DEPTH)
+        return self.depth_float.get_data()
+    
+    def get_sensor(self):
+        self.camera.get_position(self.pose, sl.REFERENCE_FRAME.WORLD)
+        self.camera.get_sensors_data(self.sensors_data, sl.TIME_REFERENCE.IMAGE)
+        cam_imu = self.sensors_data.get_imu_data()
+        timestamp = self.camera.get_timestamp(sl.TIME_REFERENCE.CURRENT)
+        time = timestamp.get_milliseconds()
+        
+        baro_value = self.sensors_data.get_barometer_data().pressure
+        
+        tx = round(self.pose.get_translation(self.py_translation).get()[0], 3)
+        ty = round(self.pose.get_translation(self.py_translation).get()[1], 3)
+        tz = round(self.pose.get_translation(self.py_translation).get()[2], 3)
+        
+        # Display the orientation quaternion
+        
+        ox = round(self.pose.get_orientation(self.py_orientation).get()[0], 3)
+        oy = round(self.pose.get_orientation(self.py_orientation).get()[1], 3)
+        oz = round(self.pose.get_orientation(self.py_orientation).get()[2], 3)
+        ow = round(self.pose.get_orientation(self.py_orientation).get()[3], 3)
+        t_poses = [tx, ty, tz, ox, oy, oz, ow]
+        
+        #Display the IMU acceleratoin
+        acceleration = [0,0,0]
+        cam_imu.get_linear_acceleration(acceleration)
+        ax = round(acceleration[0], 3)
+        ay = round(acceleration[1], 3)
+        az = round(acceleration[2], 3)
+        
+        #Display the IMU angular velocity
+        a_velocity = [0,0,0]
+        cam_imu.get_angular_velocity(a_velocity)
+        vx = round(a_velocity[0], 3)
+        vy = round(a_velocity[1], 3)
+        vz = round(a_velocity[2], 3)
 
-    def is_open(self):
-        '''Check whether the camera is openend or not'''
-        return self.is_opened
-
-    def grab(self):
-        '''Grab a set of sensor data'''
-        status = self.camera.grab(self.runtime_params)
+        # Display the IMU orientation quaternion
+        
+        ox = round(cam_imu.get_pose(self.zed_imu_pose).get_orientation().get()[0], 3)
+        oy = round(cam_imu.get_pose(self.zed_imu_pose).get_orientation().get()[1], 3)
+        oz = round(cam_imu.get_pose(self.zed_imu_pose).get_orientation().get()[2], 3)
+        ow = round(cam_imu.get_pose(self.zed_imu_pose).get_orientation().get()[3], 3)
+        imu_poses = [ax, ay, az, vx, vy, vz, ox, oy, oz, ow]
+        
+        return time, baro_value, t_poses, imu_poses
+    
+    def get_sensors_data(self):
+        status = self.camera.get_sensors_data(self.sensors_data, sl.TIME_REFERENCE.CURRENT)
         return status == sl.ERROR_CODE.SUCCESS
 
     def get_images(self):
@@ -53,13 +109,41 @@ class ZED():
         self.camera.retrieve_image(self.right_image, sl.VIEW.RIGHT)
         self.camera.retrieve_image(self.depth_image, sl.VIEW.DEPTH)
         return self.left_image.get_data()[:,:,:3], self.right_image.get_data()[:,:,:3], self.depth_image.get_data()[:,:,:3]
-
-    def get_depth(self):
-        '''Retrieve the depth data'''
-        self.camera.retrieve_measure(self.depth_float, sl.MEASURE.DEPTH)
-        return self.depth_float.get_data()
-
-
+    
+    def grab(self):
+        '''Grab a set of sensor data'''
+        status = self.camera.grab(self.runtime_params)
+        return status == sl.ERROR_CODE.SUCCESS
+    
+    def is_open(self):
+        '''Check whether the camera is openend or not'''
+        return self.is_opened
+    
+    def load_svo(self, path, realtime=False, depth_mode='neural', coord_unit='m'):
+        self.input_type.set_from_svo_file(path)
+        config=sl.InitParameters(input_t = self.input_type, svo_real_time_mode=realtime)
+        if depth_mode is not None:
+            config.depth_mode = self.MAP_DEPTH_MODE[depth_mode.lower()]
+        if coord_unit is not None:
+            config.coordinate_units = self.MAP_COORD_UNIT[coord_unit.lower()]
+        status = self.camera.open(config)
+        self.is_opened = (status == sl.ERROR_CODE.SUCCESS)
+        return self.is_opened
+    
+    def start_recording(self, path):
+        recording_param = sl.RecordingParameters(path+'.svo', sl.SVO_COMPRESSION_MODE.H264)
+        err = self.camera.enable_recording(recording_param)
+        return err
+    
+    def tracking_pose(self):
+        tracking_parameters = sl.PositionalTrackingParameters(_init_pos=self.transform)
+        err = self.camera.enable_positional_tracking(tracking_parameters)
+        return err
+        
+    
+def save_pickle(dic, path):
+    with open(path+'.pickle', "wb") as f:
+        pickle.dump(dic, f)
 
 def print_zed_info(zed:ZED):
     '''Print camera information of the ZED camera'''
