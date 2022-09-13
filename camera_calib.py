@@ -46,7 +46,7 @@ def load_config(config_file):
     with open(config_file, 'rt') as f:
         config_new = json.load(f)
         for key, value in config_new.items():
-            if key in config: config[key] = value
+            config[key] = value
 
     if type(config['cam_K']) is list:
         config['cam_K'] = np.array(config['cam_K'])
@@ -131,7 +131,7 @@ if __name__ == '__main__':
     print(f'* Calibration flags: {bin(config["calib_flags"])}')
     print(f'* Camera files: {config["cam_file"]}')
     print(f'* The number of used images: {len(cam_files)} / {len(all_files)}')
-    print(f'* RMS error: {cam_rms:.6f}')
+    print(f'* RMS error: {cam_rms:.6f} [pixel]')
 
     # Visualize reprojected points
     show_reproject_pts(cam_img, cam_K, cam_dist, cam_rvec, cam_tvec, cam_pts, obj_pts, config['img_plot_rows'])

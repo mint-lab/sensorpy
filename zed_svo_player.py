@@ -36,7 +36,7 @@ def play_svo(svo_file, svo_realtime=False, depth_mode='neural', zoom=0.5):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='ZED SVO Player')
     parser.add_argument('svo_file',             nargs=1, type=str,                       help='the name of the SVO file (e.g. test.svo)')
-    parser.add_argument('--svo_realtime', '-r', nargs=1, type=bool,  default=[False],    help='the flag to enable realtime play (default: False)')
+    parser.add_argument('--svo_realtime', '-r', nargs=1, type=bool,  default=[False],    help='the flag to enable realtime SVO play (default: False)')
     parser.add_argument('--depth_mode',   '-d', nargs=1, type=str,   default=['neural'], help='the depth mode (default: "neural")')
     parser.add_argument('--zoom',         '-z', nargs=1, type=float, default=[0.5],      help='the zoom ratio of images (default: 0.5)')
     args = parser.parse_args()
