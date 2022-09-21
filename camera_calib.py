@@ -45,8 +45,7 @@ def load_config(config_file):
     config = get_default_config()
     with open(config_file, 'rt') as f:
         config_new = json.load(f)
-        for key, value in config_new.items():
-            config[key] = value
+        config.update(config_new)
 
     if type(config['cam_K']) is list:
         config['cam_K'] = np.array(config['cam_K'])
