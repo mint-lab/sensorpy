@@ -7,7 +7,7 @@ def play_svo(svo_file, svo_realtime=False, depth_mode='neural', zoom=0.5):
     '''Play the given SVO file'''
 
     zed = ZED()
-    zed.open(svo_file=svo_file, depth_mode=depth_mode)
+    zed.open(svo_file=svo_file, svo_realtime=svo_realtime, depth_mode=depth_mode)
     print_zed_info(zed)
     sys.stdout.flush()
 

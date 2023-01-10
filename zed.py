@@ -22,7 +22,7 @@ class ZED():
         self.MAP_DEPTH_MODE = {'neural': sl.DEPTH_MODE.NEURAL, 'ultra': sl.DEPTH_MODE.ULTRA, 'quality': sl.DEPTH_MODE.QUALITY, 'performance': sl.DEPTH_MODE.PERFORMANCE}
         self.MAP_COORD_UNIT = {'mm': sl.UNIT.MILLIMETER, 'cm': sl.UNIT.CENTIMETER, 'm': sl.UNIT.METER}
 
-    def open(self, resolution='720p', fps=30, depth_mode='neural', coord_unit='m', svo_file=None, svo_realtime=False, config=sl.InitParameters(), min_depth = 0.4):
+    def open(self, resolution='720p', fps=30, depth_mode='neural', coord_unit='m', min_depth = 0.4, svo_file=None, svo_realtime=False, config=sl.InitParameters()):
         '''Start the camera'''
         if svo_file is not None:
             config.set_from_svo_file(svo_file)
@@ -76,6 +76,11 @@ class ZED():
         self.camera.retrieve_measure(self.depth_float, sl.MEASURE.DEPTH)
         return self.depth_float.get_data()
 
+    def get_xyz(self):
+        '''Retrieve the depth data as point cloud'''
+        self.camera.retrieve_measure(self.xyz, sl.MEASURE.XYZ)
+        return self.xyz.get_data()[:,:,:3]
+
     def get_tracking_pose(self):
         '''Retrieve the pose (orientation and position) from positional tracking'''
         pose = sl.Pose()
@@ -102,10 +107,6 @@ class ZED():
         recording_param = sl.RecordingParameters(file, sl.SVO_COMPRESSION_MODE.H264)
         status = self.camera.enable_recording(recording_param)
         return status == sl.ERROR_CODE.SUCCESS
-    
-    def get_xyz(self):
-        self.camera.retrieve_measure(self.xyz, sl.MEASURE.XYZ)
-        return self.xyz.get_data()[:,:,:3]
 
 def print_zed_info(zed:ZED):
     '''Print camera information of the ZED camera'''
