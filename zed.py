@@ -37,7 +37,7 @@ class ZED():
             config.coordinate_units = self.MAP_COORD_UNIT[coord_unit.lower()]
         if min_depth is not None:
             config.depth_minimum_distance = min_depth
-        config.coordinate_system = sl.COORDINATE_SYSTEM.RIGHT_HANDED_Z_UP_X_FWD
+        config.coordinate_system = sl.COORDINATE_SYSTEM.IMAGE
         status = self.camera.open(config)
         self.is_opened = (status == sl.ERROR_CODE.SUCCESS)
         return self.is_opened
@@ -76,11 +76,6 @@ class ZED():
         self.camera.retrieve_measure(self.depth_float, sl.MEASURE.DEPTH)
         return self.depth_float.get_data()
 
-    def get_xyz(self):
-        '''Retrieve the depth data as point cloud'''
-        self.camera.retrieve_measure(self.xyz, sl.MEASURE.XYZ)
-        return self.xyz.get_data()[:,:,:3]
-
     def get_tracking_pose(self):
         '''Retrieve the pose (orientation and position) from positional tracking'''
         pose = sl.Pose()
@@ -91,11 +86,35 @@ class ZED():
         '''Retrieve the orientation from IMU'''
         pose = self.sensor_data.get_imu_data().get_pose()
         return pose.get_orientation().get()
+    
+    def get_imu_linear_acc(self):
+        '''Retrieve the Linear Acceleration from IMU'''
+        return self.sensor_data.get_imu_data().get_linear_acceleration()
 
     def get_barometer(self):
         '''Retrieve the barometer value (unit: [hPa])'''
         return self.sensor_data.get_barometer_data().pressure
-
+    
+    def get_rotation(self):
+        '''Get rotation matrix'''
+        pose = sl.Pose()
+        status = self.camera.get_position(pose, sl.REFERENCE_FRAME.WORLD)
+        return pose.get_rotation_matrix().r
+    
+    def get_rotation_v(self):
+        '''Get rotation vector'''
+        pose = sl.Pose()
+        status = self.camera.get_position(pose, sl.REFERENCE_FRAME.WORLD)
+        return pose.get_rotation_vector()
+    
+    def get_magnetic_field(self):
+        return self.sensor_data.get_magnetometer_data().get_magnetic_field_calibrated()
+    
+    def get_xyz(self):
+        '''Retrieve the depth data as point cloud'''
+        self.camera.retrieve_measure(self.xyz, sl.MEASURE.XYZ)
+        return self.xyz.get_data()[:,:,:3]
+    
     def start_tracking(self):
         '''Start positional tracking'''
         tracking_param = sl.PositionalTrackingParameters()
