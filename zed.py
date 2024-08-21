@@ -17,15 +17,12 @@ class ZED():
         self.depth_float = sl.Mat()
         self.xyz = sl.Mat()
         self.sensor_data = sl.SensorsData()
-        self.plane = sl.Plane()
-        self.coord = None
-        self.mesh = sl.Mesh()
 
         self.MAP_RESOLUTION = {'2k': sl.RESOLUTION.HD2K, '1080p': sl.RESOLUTION.HD1080, '720p': sl.RESOLUTION.HD720, 'vga': sl.RESOLUTION.VGA}
         self.MAP_DEPTH_MODE = {'neural': sl.DEPTH_MODE.NEURAL, 'ultra': sl.DEPTH_MODE.ULTRA, 'quality': sl.DEPTH_MODE.QUALITY, 'performance': sl.DEPTH_MODE.PERFORMANCE}
         self.MAP_COORD_UNIT = {'mm': sl.UNIT.MILLIMETER, 'cm': sl.UNIT.CENTIMETER, 'm': sl.UNIT.METER}
 
-    def open(self, resolution='720p', fps=30, depth_mode='neural', coord_unit='m', min_depth = 0.4, max_depth = 10, svo_file=None, svo_realtime=False, confi_thre = 100, config=sl.InitParameters()):
+    def open(self, resolution='720p', fps=30, depth_mode='neural', coord_unit='m', min_depth = 0.4, svo_file='', svo_realtime=False, config=sl.InitParameters()):
         '''Start the camera'''
         if svo_file:
             config.set_from_svo_file(svo_file)
@@ -40,10 +37,6 @@ class ZED():
             config.coordinate_units = self.MAP_COORD_UNIT[coord_unit.lower()]
         if min_depth is not None:
             config.depth_minimum_distance = min_depth
-        if max_depth is not None:
-            config.depth_maximum_distance = max_depth
-        if confi_thre is not None:
-            self.runtime_params.confidence_threshold = confi_thre
         config.coordinate_system = sl.COORDINATE_SYSTEM.IMAGE
         status = self.camera.open(config)
         self.is_opened = (status == sl.ERROR_CODE.SUCCESS)
